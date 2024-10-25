@@ -67,7 +67,7 @@
     "href": "index.html#definition-and-purpose",
     "title": "Goodness-of-Fit and Visual Predictive Checks in PopPK Modeling",
     "section": "3.1 Definition and Purpose",
-    "text": "3.1 Definition and Purpose\nVPCs offer a powerful way to compare observed data percentiles to simulated data percentiles​ This is accomplished by simulated from the fitted model given the observed data and comparing the percentiles of the observed data to the percentiles of the simulated data.\n\nAdvantages: VPCs account for variability and help visualize prediction intervals​\n\nDiscrepancies between observed percentiles and predicted intervals highlight potential misspecifications in structural or residual models\nPrediction-corrected VPCs (pcVPCs) are another common version of VPCs that adjust for study design variability (e.g., different dosing regimens or covariates)​"
+    "text": "3.1 Definition and Purpose\nVPCs offer a powerful way to compare observed data percentiles to simulated data percentiles. This is accomplished by simulating from the fitted model given the observed data many times and comparing the percentiles of the observed data to the percentiles of the simulated data.\n\nAdvantages: VPCs account for variability and help visualize prediction intervals.\n\nDiscrepancies between observed percentiles and predicted intervals highlight potential misspecifications in structural or residual models\nPrediction-corrected VPCs (pcVPCs) are another common version of VPCs that adjust for study design variability (e.g., different dosing regimens or covariates)​"
   },
   {
     "objectID": "index.html#mathematical-foundations-of-pcvpcs",

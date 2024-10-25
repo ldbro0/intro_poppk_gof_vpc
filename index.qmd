@@ -385,11 +385,11 @@ ggpubr::ggarrange(plot_ind_misspecified + facet_wrap_paginate(~ID,scales = "free
 
 # Introduction to Visual Predictive Checks (VPCs)
 
-## 3.1 Definition and Purpose
+## 3.1 Definition and Purpose {.smaller}
 
-VPCs offer a powerful way to compare observed data percentiles to simulated data percentiles​  This is accomplished by simulated from the fitted model given the observed data and comparing the percentiles of the observed data to the percentiles of the simulated data.
+VPCs offer a powerful way to compare observed data percentiles to simulated data percentiles.  This is accomplished by simulating from the fitted model given the observed data many times and comparing the percentiles of the observed data to the percentiles of the simulated data.
 
--   Advantages: VPCs account for variability and help visualize prediction intervals​
+-   Advantages: VPCs account for variability and help visualize prediction intervals.
 
     -   Discrepancies between observed percentiles and predicted intervals highlight potential misspecifications in structural or residual models
 
