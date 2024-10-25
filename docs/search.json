@@ -1,0 +1,128 @@
+[
+  {
+    "objectID": "index.html#definition-and-importance",
+    "href": "index.html#definition-and-importance",
+    "title": "Goodness-of-Fit and Visual Predictive Checks in PopPK Modeling",
+    "section": "1.1 Definition and Importance",
+    "text": "1.1 Definition and Importance\nGoodness-of-Fit (GOF) measures the agreement between a model and the observed data in population PK modeling. It’s crucial for validating model performance and assumptions.\n\nKey Focus: Model evaluation (diagnostics, adequacy, assessment) vs. model-building and qualification.\nWhy It Matters: Visual assessment plays a critical role in evaluating nonlinear mixed-effect models (NLMEMs)."
+  },
+  {
+    "objectID": "index.html#objectives-of-gof-assessment",
+    "href": "index.html#objectives-of-gof-assessment",
+    "title": "Goodness-of-Fit and Visual Predictive Checks in PopPK Modeling",
+    "section": "1.2 Objectives of GOF Assessment",
+    "text": "1.2 Objectives of GOF Assessment\n\nEnsure that the model adequately describes observed data.\nAssess whether model assumptions (e.g., distribution, variability) are met.\nIdentify possible areas for improvement by detecting systematic discrepancies.\n\nGraphical methods provide insight into: - Structural model correctness - Residual and random variability assessments."
+  },
+  {
+    "objectID": "index.html#observed-vs.-predicted-plots",
+    "href": "index.html#observed-vs.-predicted-plots",
+    "title": "Goodness-of-Fit and Visual Predictive Checks in PopPK Modeling",
+    "section": "2.1 Observed vs. Predicted Plots",
+    "text": "2.1 Observed vs. Predicted Plots\nPopulation Predictions (PRED) vs. Observations (DV)\n\nInterpretation: Ideally, data should scatter uniformly around the line of identity. Systematic deviations could indicate structural model misspecifications​\n\nThe addition of informative covariates should reduce the scatter of the data points around the line of identity\n\n\n\n\nexpand for full code\n# Generate PRED vs. DV plots\nplot_pred_misspecified &lt;- pmplots::dv_pred(misspecified_fit) + ggtitle(\"Misspecified Model\")\nplot_pred_true &lt;- pmplots::dv_pred(true_fit) + ggtitle(\"True Model\")\n\n# Display plots side by side\nplot_pred_misspecified + plot_pred_true\n\n\n\n\n\n\n\n\n\nIndividual Predictions (IPRED) vs. Observations (DV)\n\nInterpretation: Ideally, data should scatter uniformly around the line of identity. Systematic deviations could indicate structural model misspecifications​\n\nNeed to be careful in situations with high shrinkage, as individual predictions may be biased​\n\n\n\n\nexpand for full code\n# Generate IPRED vs. DV plots\nplot_ipred_misspecified &lt;- pmplots::dv_ipred(misspecified_fit) + ggtitle(\"Misspecified Model\")\nplot_ipred_true &lt;- pmplots::dv_ipred(true_fit) + ggtitle(\"True Model\")\n\n# Display plots side by side\nplot_ipred_misspecified + plot_ipred_true"
+  },
+  {
+    "objectID": "index.html#residual-plots",
+    "href": "index.html#residual-plots",
+    "title": "Goodness-of-Fit and Visual Predictive Checks in PopPK Modeling",
+    "section": "2.2 Residual Plots",
+    "text": "2.2 Residual Plots\n\nThere are several flavors of residuals that are commonly used in popPK modeling\n\nNotably Conditional Weighted Residuals (CWRES) and Individual Weighted Residuals (IWRES)\n\n\nConditional Weighted Residuals (CWRES) - CWRES are calculated based on the conditional distribution of observations, taking into account both inter-individual and intra-individual variability. They are computed as:\n\\(\\text{CWRES}_i = \\frac{y_i - \\hat{y}_{i,\\text{cond}}}{\\text{Var}(y_i \\mid \\hat{\\theta}, \\hat{\\eta}_i)}\\)\nWhere:\n\n( \\(y_i\\) ) is the observed data point for individual ( i ),\n( \\(\\hat{y}_{i,\\text{cond}}\\) ) is the conditional prediction given the individual’s parameters ( \\(\\hat{\\theta}\\) ) and ( \\(\\hat{\\eta}_i\\) ) (i.e., the individual-specific prediction),\n( \\(\\text{Var}(y_i \\mid \\hat{\\theta} \\hat{\\eta}_i)\\) ) is the conditional variance of ( \\(y_i\\) ), accounting for both the inter-individual variability (from random effects, ( \\(\\eta\\) )) and intra-individual variability (residual error, ( \\(\\epsilon\\) )).\n\nThus, CWRES adjusts for the uncertainty in the model predictions and are normalized by the conditional variance.\nIndividual Weighted Residuals (IWRES)\nIWRES are simpler and involve the difference between the observed data and the individual predictions, scaled by the model’s prediction error for the individual. Mathematically, they are expressed as:\n\\(\\ \\text{IWRES}_i = \\frac{y_i - \\hat{y}_{i,\\text{ind}}}{\\sigma}\\)\nWhere:\n\n( \\(y_i\\) ) is the observed data point for individual ( i ),\n( \\(\\hat{y}_{i,\\text{ind}}\\) ) is the individual prediction (IPRED), which depends only on the individual parameters ( \\(\\hat{\\theta}\\) ) and ( \\(\\hat{\\eta}_i\\) ),\n( \\(\\sigma\\) ) is the residual unexplained variability (standard deviation of the residual error).\n\nIWRES do not account for the uncertainty in the model’s population parameters, unlike CWRES. They simply measure the discrepancy between the data and the individual prediction, scaled by the residual error.\nSummary of Differences\n\nCWRES accounts for the full variability of the data, including inter-individual and intra-individual variability, making it more reflective of the model’s conditional predictions.\nIWRES is based solely on individual predictions and residual error, making it a simpler, more localized residual that doesn’t account for population-level uncertainty.\nCWRES generally provides a more comprehensive diagnostic when assessing how well the model fits the data, considering both individual and population variability, while IWRES focuses on individual-level fit."
+  },
+  {
+    "objectID": "index.html#quantile-quantile-q-q-plots",
+    "href": "index.html#quantile-quantile-q-q-plots",
+    "title": "Goodness-of-Fit and Visual Predictive Checks in PopPK Modeling",
+    "section": "2.3 Quantile-Quantile (Q-Q) Plots",
+    "text": "2.3 Quantile-Quantile (Q-Q) Plots\n\nAssessing normality of residuals helps in verifying distributional assumptions. Deviations suggest model misspecification​\n\n\n\nexpand for full code\n# Q-Q Plot of CWRES misspecified model vs true model\nplot_qq_misspecified &lt;- pmplots::cwres_q(misspecified_fit) + ggtitle(\"Misspecified Model\")\nplot_qq_true &lt;- pmplots::cwres_q(true_fit) + ggtitle(\"True Model\")\n\n# Display plots side by side\nplot_qq_misspecified + plot_qq_true"
+  },
+  {
+    "objectID": "index.html#other-diagnostic-plots-eta-distribution",
+    "href": "index.html#other-diagnostic-plots-eta-distribution",
+    "title": "Goodness-of-Fit and Visual Predictive Checks in PopPK Modeling",
+    "section": "2.4 Other Diagnostic Plots: Eta Distribution",
+    "text": "2.4 Other Diagnostic Plots: Eta Distribution\n\nEta Shrinkage and Empirical Bayes Estimates (EBE) Correlations High Shrinkage (&gt; 30%) may distort individual parameter estimates and random effect assumptions.\n\n\n\nexpand for full code\n# Plot Eta Histograms and EBE correlations\np &lt;- true_fit %&gt;% \n  select(ID,eta.Km, eta.CL, eta.V1) %&gt;%\n  distinct() %&gt;% \n  pmplots::eta_hist(, x = c(\"eta.Km\",\"eta.CL\", \"eta.V1\"))\n\np[[1]] + geom_vline(aes(xintercept = 0),color = \"red\", linetype = 'dashed') + \np[[2]] + geom_vline(aes(xintercept = 0), color = \"red\", linetype = 'dashed') + \np[[3]] + geom_vline(aes(xintercept = 0), color = \"red\", linetype = 'dashed')"
+  },
+  {
+    "objectID": "index.html#other-diagnostic-plots-shrinkage",
+    "href": "index.html#other-diagnostic-plots-shrinkage",
+    "title": "Goodness-of-Fit and Visual Predictive Checks in PopPK Modeling",
+    "section": "2.5 Other Diagnostic Plots: Shrinkage",
+    "text": "2.5 Other Diagnostic Plots: Shrinkage\n\nEta Shrinkage and Empirical Bayes Estimates (EBE)\n\nHigh Shrinkage (&gt; 30%) may distort individual parameter estimates and random effect assumptions.\n“In an extreme case of no data available on a particular individual, the individual’s EBE will be equal to the population value. So, the variance of EBE distribution is shrinking towards zero as the quantity of information at the individual level diminishes, a phenomenon defined as η-shrinkage.” (Savic et al. 2009)\n\n\nLooking at the shrinkage:\n\n\nexpand for full code\n# show shrinkage\nDT::datatable(true_fit$shrink %&gt;% mutate_all(round,2), options = list(pageLength = 9))"
+  },
+  {
+    "objectID": "index.html#other-diagnostic-plots-eta-correlations",
+    "href": "index.html#other-diagnostic-plots-eta-correlations",
+    "title": "Goodness-of-Fit and Visual Predictive Checks in PopPK Modeling",
+    "section": "2.6 Other Diagnostic Plots: Eta Correlations",
+    "text": "2.6 Other Diagnostic Plots: Eta Correlations\n\nExploring the correlation between Etas is important for understanding the relationships between random effects.\n\nHelps inform the need for additional covariates or model refinements (omega block).\n\n\n\n\nexpand for full code\n# Plot Eta correlations\ntrue_fit %&gt;% \n  select(ID,eta.Km, eta.CL, eta.V1) %&gt;%\n  distinct() %&gt;% \n  pmplots::eta_pairs( etas = c(\"eta.Km\",\"eta.CL\", \"eta.V1\"))"
+  },
+  {
+    "objectID": "index.html#other-diagnostic-plots-individual-plots",
+    "href": "index.html#other-diagnostic-plots-individual-plots",
+    "title": "Goodness-of-Fit and Visual Predictive Checks in PopPK Modeling",
+    "section": "2.7 Other Diagnostic Plots: Individual Plots",
+    "text": "2.7 Other Diagnostic Plots: Individual Plots\n\nIndividual plots can help identify outliers or trends in individual data points that may not be apparent in population-level plots.\n\n\n\nCode\n# Generate individual plots\n\nplot_ind_misspecified &lt;- data %&gt;%\n  filter(MDV == 0) %&gt;%\n  ggplot(aes(TIME, DV)) + \n  geom_point(size = 2.5, alpha = 0.5 ) +\n  #geom_line(aes(group = ID)) + \n  geom_line(data = misspecified_fit ,aes(x= TIME, y= IPRED, group=ID), color = \"#167fc9\", alpha= 0.6) +\n  geom_line(data = misspecified_fit,aes(x= TIME, y= PRED, group=ID), color = \"#167fc9\", linetype = \"dashed\", alpha= 0.6) +\n  geom_vline(data = data %&gt;% filter(EVID ==1 ), aes(xintercept = TIME), linetype = \"dashed\", color = \"grey\") +\n  #ggrepel::geom_label_repel(data=misspecified_fit %&gt;% \n  #                            filter(abs(CWRES)&gt;=3) %&gt;% \n  #                            mutate(ID = as.numeric(as.character(ID))),\n  #                aes(label = round(abs(CWRES),2)),\n  #               box.padding   = 0.35,\n  #               point.padding = 0.8,\n  #               segment.color = 'grey50') +\n  labs(title=\"Misspecified Model\") + \n  ggforce::facet_wrap_paginate(~ID, scales = \"free\", ncol = 3, nrow = 3)\n\n  npages = ggforce::n_pages(plot_ind_misspecified)\n  \n\nplot_ind_true &lt;- data %&gt;%\n  filter(MDV == 0) %&gt;%\n  ggplot(aes(TIME, DV)) + \n  geom_point(size = 2.5, alpha = 0.7 ) +\n  #geom_line(aes(group = ID)) + \n  geom_line(data = true_fit ,aes(x= TIME, y= IPRED, group=ID), color = \"#167fc9\", alpha= 0.6) +\n  geom_line(data = true_fit,aes(x= TIME, y= PRED, group=ID), color = \"#167fc9\", linetype = \"dashed\", alpha= 0.6) +\n  geom_vline(data = data %&gt;% filter(EVID ==1 ), aes(xintercept = TIME), linetype = \"dashed\", color = \"grey\") +\n  #ggrepel::geom_label_repel(data=true_fit %&gt;% \n  #                            filter(abs(CWRES)&gt;=3) %&gt;% \n  #                            mutate(ID = as.numeric(as.character(ID))),\n  #                aes(label = round(abs(CWRES),2)),\n  #               box.padding   = 0.35,\n  #               point.padding = 0.8,\n  #               segment.color = 'grey50') +\n  labs(title=\"True Model\") + \n  ggforce::facet_wrap_paginate(~ID, scales = \"free\", ncol = 3, nrow = 3)\n\n  npages = ggforce::n_pages(plot_ind_true)  \n  \n\n\nggpubr::ggarrange(plot_ind_misspecified + facet_wrap_paginate(~ID,scales = \"free\", ncol = 3, nrow = 3, page = 1), \n                  plot_ind_true + facet_wrap_paginate(~ID,scales = \"free\", ncol = 3, nrow = 3, page = 1), \n                  ncol = 2, nrow = 1)"
+  },
+  {
+    "objectID": "index.html#definition-and-purpose",
+    "href": "index.html#definition-and-purpose",
+    "title": "Goodness-of-Fit and Visual Predictive Checks in PopPK Modeling",
+    "section": "3.1 Definition and Purpose",
+    "text": "3.1 Definition and Purpose\nVPCs offer a powerful way to compare observed data percentiles to simulated data percentiles​\n\nAdvantages: VPCs account for variability and help visualize prediction intervals​\n\nDiscrepancies between observed percentiles and predicted intervals highlight potential misspecifications in structural or residual models\nPrediction-corrected VPCs (pcVPCs) are another common version of VPCs that adjust for study design variability (e.g., different dosing regimens or covariates)​"
+  },
+  {
+    "objectID": "index.html#mathematical-foundations-of-pcvpcs",
+    "href": "index.html#mathematical-foundations-of-pcvpcs",
+    "title": "Goodness-of-Fit and Visual Predictive Checks in PopPK Modeling",
+    "section": "3.2 Mathematical Foundations of pcVPCs",
+    "text": "3.2 Mathematical Foundations of pcVPCs\nIn Prediction-Corrected Visual Predictive Checks (pcVPCs), the observed and simulated concentrations are adjusted to account for variability due to study design (e.g., different dosing regimens or covariates). This correction is based on the ratio of the median model-predicted concentration for a typical individual in a specific time bin to the individual-specific predicted concentration for each observation.\nThe prediction-corrected concentration \\(C_{\\text{pc},i,j}\\) for individual \\(i\\) at time point \\(j\\) is calculated as:\n\\[\nC_{\\text{pc},i,j} = C_{i,j} \\times \\frac{PRED_{\\text{median}, j_{\\text{bin}}}}{PRED_{i,j}}\n\\]\nWhere:\n\n\\(C_{i,j}\\) = Observed or simulated concentration for individual \\(i\\) at time point \\(j\\).\n\\(PRED_{\\text{median}, j_{\\text{bin}}}\\) = Median model-predicted concentration for a typical individual in time bin \\(j_{\\text{bin}}\\), using typical parameter values (e.g., population-level parameters).\n\\(PRED_{i,j}\\) = Individual-specific model-predicted concentration for individual \\(i\\) at time point \\(j\\), taking into account individual covariates and random effects.\n\nPurpose of the Correction:\nBy using the median predicted concentration for each time bin \\(j_{\\text{bin}}\\), this approach normalizes observed and simulated data relative to a typical individual. This ensures that variability in dosing, covariates, or sampling schedules across individuals is appropriately corrected, making it easier to detect model misspecifications without the confounding effects of study design variability."
+  },
+  {
+    "objectID": "index.html#conducting-vpcs",
+    "href": "index.html#conducting-vpcs",
+    "title": "Goodness-of-Fit and Visual Predictive Checks in PopPK Modeling",
+    "section": "3.3 Conducting VPCs",
+    "text": "3.3 Conducting VPCs\nInterpretation: Does the observed data distribution fall within the predicted intervals and confidence bands. Look for systematic trends that could indicate residual error misspecification​\n\nThis won’t tell us anything about the model’s predictive performance at the individual level.\n\n\n\nexpand for full code\n# Perform pcVPC\nmisspecified_vpc &lt;- nlmixr2::vpcSim(misspecified_fit,n = 500, pred=T)\ntrue_vpc &lt;- nlmixr2::vpcSim(true_fit,n = 500, pred=T, keep = \"DOSE\")\n\n\nmisspecified_vpc_time &lt;- misspecified_fit %&gt;% \n  mutate(ID = as.numeric(as.character(ID))) %&gt;% \n  left_join(\n    misspecified_vpc %&gt;% \n      mutate(ID = as.numeric(as.character(id))) %&gt;% \n      select(ID, TIME=time, pred) %&gt;% distinct()\n    ) %&gt;%  \n  tidyvpc::observed(x = TIME, y = DV) %&gt;%\n  tidyvpc::simulated(misspecified_vpc, y = ipred) %&gt;%\n  tidyvpc::binning(bin = \"jenks\", n_bins = 10) %&gt;%  # You can adjust the number of bins\n  tidyvpc::predcorrect(pred=pred) %&gt;% \n  tidyvpc::vpcstats()\n\n\nmisspecified_vpc_tad &lt;- misspecified_fit %&gt;%\n  mutate(ID = as.numeric(as.character(ID))) %&gt;% \n  left_join(\n    misspecified_vpc %&gt;% \n      mutate(ID = as.numeric(as.character(id))) %&gt;% \n      select(ID, TIME=time, pred) %&gt;% distinct()\n    ) %&gt;%  \n  tidyvpc::observed(x = tad, y = DV) %&gt;%\n  tidyvpc::simulated(misspecified_vpc, y = ipred) %&gt;%\n  tidyvpc::binning(bin = \"jenks\", n_bins = 10) %&gt;%  # You can adjust the number of bins\n  tidyvpc::predcorrect(pred=pred) %&gt;% \n  tidyvpc::vpcstats()\n\ntrue_vpc_time &lt;- true_fit %&gt;% \n  mutate(ID = as.numeric(as.character(ID))) %&gt;% \n  left_join(\n    true_vpc %&gt;% \n      mutate(ID = as.numeric(as.character(id))) %&gt;% \n      select(ID, TIME=time, pred) %&gt;% distinct()\n    ) %&gt;%  \n  tidyvpc::observed(x = TIME, y = DV) %&gt;%\n  tidyvpc::simulated(true_vpc, y = ipred) %&gt;%\n  tidyvpc::binning(bin = \"jenks\", n_bins = 10) %&gt;%  # You can adjust the number of bins\n  tidyvpc::predcorrect(pred=pred) %&gt;% \n  tidyvpc::vpcstats()\n\ntrue_vpc_tad &lt;- true_fit %&gt;% \n  mutate(ID = as.numeric(as.character(ID))) %&gt;% \n  left_join(\n    true_vpc %&gt;% \n      mutate(ID = as.numeric(as.character(id))) %&gt;% \n      select(ID, TIME=time, pred) %&gt;% distinct()\n    ) %&gt;%  \n  tidyvpc::observed(x = tad, y = DV) %&gt;%\n  tidyvpc::simulated(true_vpc, y = ipred) %&gt;%\n  tidyvpc::binning(bin = \"jenks\", n_bins = 10) %&gt;%  # You can adjust the number of bins\n  tidyvpc::predcorrect(pred=pred) %&gt;% \n  tidyvpc::vpcstats()\n\n\na &lt;- plot(misspecified_vpc_time) + ggtitle(\"Misspecified Model\") + xlab(\"Time (hrs)\")\nb &lt;- plot(misspecified_vpc_tad) + xlab(\"Time After Dose (hrs)\") \nc &lt;- plot(true_vpc_time) + ggtitle(\"True Model\") +xlab(\"Time (hrs)\")\nd &lt;- plot(true_vpc_tad) + xlab(\"Time After Dose (hrs)\") \n\n\nggpubr::ggarrange(a, c, b, d, ncol = 2, nrow = 2)"
+  },
+  {
+    "objectID": "index.html#stratified-vpcs",
+    "href": "index.html#stratified-vpcs",
+    "title": "Goodness-of-Fit and Visual Predictive Checks in PopPK Modeling",
+    "section": "3.4 Stratified VPCs",
+    "text": "3.4 Stratified VPCs\nImportant to consider relevant stratification to fully evaluate model performance​\n\n\nexpand for full code\ntrue_vpc_strata &lt;- data %&gt;% \n  filter(MDV == 0 ) %&gt;% \n  mutate(ID = as.numeric(as.character(ID))) %&gt;% \n  left_join(\n    true_vpc %&gt;% \n      mutate(ID = as.numeric(as.character(id))) %&gt;% \n      select(ID, TIME=time, pred) %&gt;% distinct()\n    ) %&gt;%  \n  tidyvpc::observed(x = TIME, y = DV) %&gt;%\n  tidyvpc::simulated(true_vpc, y = sim) %&gt;%\n  tidyvpc::stratify(~DOSE) %&gt;% \n  tidyvpc::binning(bin = \"jenks\", n_bins = 10) %&gt;%  # You can adjust the number of bins\n  tidyvpc::predcorrect(pred=pred) %&gt;% \n  tidyvpc::vpcstats()\n\nplot(true_vpc_strata) + ggtitle(\"True Model ~ Stratified by dose\") + xlab(\"Time (hrs)\")"
+  },
+  {
+    "objectID": "index.html#other-vpc-flavors-psn",
+    "href": "index.html#other-vpc-flavors-psn",
+    "title": "Goodness-of-Fit and Visual Predictive Checks in PopPK Modeling",
+    "section": "3.5 Other VPC Flavors: PSN",
+    "text": "3.5 Other VPC Flavors: PSN\nPearl-Speaks-Nonmem (PSN) is another popular tool for VPCs, offering a range of features and customization options​\n# Example PSN command\nvpc run1.mod -samples=500 -auto_bin=10 -rplots=1 -output_dir=vpc_dir1\n\n\nexpand for full code\n# Example code visualizing VPCs generated using PSN\nlibrary(xpose)\n\n# Load PSN VPC data\nxpdb &lt;- xpose_data(dir = here::here(\"nonmem\"),prefix = \"Run\", 1) \n\n\nxpdb %&gt;% \n vpc_data(psn_folder = here::here(\"nonmem\", \"vpc_dir1\")) %&gt;%  # Compute the vpc data\n vpc()            # Plot the vpc\n\n\n\nPSN VPC Example"
+  },
+  {
+    "objectID": "index.html#other-vpc-flavors-mrgsolve-tidyvpc",
+    "href": "index.html#other-vpc-flavors-mrgsolve-tidyvpc",
+    "title": "Goodness-of-Fit and Visual Predictive Checks in PopPK Modeling",
+    "section": "3.6 Other VPC Flavors: MRGsolve + TidyVPC",
+    "text": "3.6 Other VPC Flavors: MRGsolve + TidyVPC\nThere are also options to perform your nonmem simulations outside of nonmem using tools like mrgsolve.\n\n\nexpand for full code\n# Example code for running VPCs using mrgsolve and tidyvpc\n# Sim for VPC\nn.vpc &lt;- 1000\n\ndf.sim.vpc &lt;-\n  df.nm %&gt;% \n  # Add parameter values\n  expand_grid(df.theta) %&gt;% \n  # Duplicate all records n.vpc times\n  # Need to give different ID#\n  expand_grid(REP = 1:n.vpc) %&gt;% \n  mutate(ID = NMID * n.vpc + REP) %&gt;% \n  arrange(REP, NMID, TIME, EVID)\n\nmrgsim.vpc &lt;- \n  mod_pk %&gt;% \n  carry_out(REP, NMID, AMT, EVID, WT, SEX) %&gt;% \n  data_set(df.sim.vpc) %&gt;%\n  omat(d.omat) %&gt;% \n  mrgsim(tad = TRUE, recover = \"PHASE\")\n\ndf.mrgsim.vpc &lt;- \n  as_tibble(mrgsim.vpc) %&gt;% \n  filter(EVID == 0)\n\n\n# Sim PRED (required for tidyvpc)\ndf.sim.pred.for.vpc &lt;-\n  df.nm %&gt;% \n  # Add parameter values\n  expand_grid(df.theta) %&gt;% \n  mutate(ID = NMID) \n\nmrgsim.pred.for.vpc &lt;- \n  mod_pk %&gt;% \n  carry_out(NMID, AMT, EVID) %&gt;% \n  data_set(df.sim.pred.for.vpc) %&gt;%\n  zero_re() %&gt;% \n  mrgsim(tad = TRUE, recover = \"PHASE\")\n\ndf.tad.pred &lt;- \n  mrgsim.pred.for.vpc %&gt;% \n  filter(EVID == 0) %&gt;% \n  # Here IPRED is PRED as zero_re was used\n  select(tad, PRED = IPRED)\n\n\nvpc &lt;- \n  df.nm.obs %&gt;% \n  bind_cols(df.tad.pred) %&gt;% \n  mutate(PHASE = factor(PHASE, levels = c(\"SD\", \"MD\"))) %&gt;% \n  observed(x=TIME, y=DV) %&gt;%\n  simulated(df.mrgsim.vpc, y=DV) %&gt;%\n  stratify(~PHASE) %&gt;% \n  # binning(bin = NTIM) %&gt;% \n  binning(bin = \"breaks\", breaks = c(0, 1, 4, 5, 12, 24, 171, 185, 200)) %&gt;% \n  vpcstats()\n\nplot(vpc) +\n  xgx_scale_x_time_units(units_dataset = time_units_dataset, \n                         units_plot    = time_units_plot,\n                         breaks = (0:40) * 6)\n\n\n\nMRGsolve + TidyVPC Example"
+  },
+  {
+    "objectID": "index.html#over-interpretation-of-diagnostics",
+    "href": "index.html#over-interpretation-of-diagnostics",
+    "title": "Goodness-of-Fit and Visual Predictive Checks in PopPK Modeling",
+    "section": "4.1 Over-Interpretation of Diagnostics",
+    "text": "4.1 Over-Interpretation of Diagnostics\n\nCritical Remember to evaluate your model with respect to your clinical context and use case.\nAvoid over-interpreting random variability as model issues, especially in sparse data settings​\nNeed to interpret GOF plots with caution in high shrinkage situations (situation where VPCs maybe more useful)​"
+  },
+  {
+    "objectID": "index.html#recap-of-key-points",
+    "href": "index.html#recap-of-key-points",
+    "title": "Goodness-of-Fit and Visual Predictive Checks in PopPK Modeling",
+    "section": "6.1 Recap of Key Points",
+    "text": "6.1 Recap of Key Points\nGOF and VPC are critical tools in model evaluation, helping to identify structural and residual errors they should be performed throughout the model development process at critical steps."
+  },
+  {
+    "objectID": "index.html#final-thoughts",
+    "href": "index.html#final-thoughts",
+    "title": "Goodness-of-Fit and Visual Predictive Checks in PopPK Modeling",
+    "section": "6.2 Final Thoughts",
+    "text": "6.2 Final Thoughts\nIterative Process: Model building is an iterative process. Be prepared to refine the model based on diagnostic outputs​"
+  }
+]

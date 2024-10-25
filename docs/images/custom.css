@@ -1,0 +1,7 @@
+.reveal {
+  background-color: #f0f0f0; /* Light gray background for all slides */
+}
+
+.reveal .slides {
+  background-color: #f0f0f0; /* Ensures background is applied across all slide elements */
+}
