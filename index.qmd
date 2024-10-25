@@ -1,6 +1,6 @@
 ---
 title: "Goodness-of-Fit and Visual Predictive Checks in PopPK Modeling"
-author: "Logan Brooks - Principal Scientist, Genentech"
+author: "Logan Brooks"
 date: "2024-10-23"
 ---
 
