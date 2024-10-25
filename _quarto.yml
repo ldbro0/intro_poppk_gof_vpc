@@ -1,0 +1,17 @@
+project:
+  type: website
+  output-dir: public
+
+format: 
+  revealjs:
+    slide-number: true
+    transition: slide
+    background-transition: zoom
+    logo: images/quarto.png
+    css: images/custom.css
+execute:
+  echo: true
+freeze: true
+editor: visual
+publish:
+  gh-pages: true

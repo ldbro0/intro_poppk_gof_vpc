@@ -1,0 +1,807 @@
+---
+title: "Goodness-of-Fit and Visual Predictive Checks in PopPK Modeling"
+author: "Logan Brooks - Principal Scientist, Genentech"
+date: "2024-10-23"
+---
+
+# Introduction to Goodness-of-Fit in Population PK Modeling
+
+## 1.1 Definition and Importance
+
+**Goodness-of-Fit (GOF)** measures the agreement between a model and the observed data in population PK modeling. It’s crucial for validating model performance and assumptions.
+
+-   **Key Focus:** Model evaluation (diagnostics, adequacy, assessment) vs. model-building and qualification.
+-   **Why It Matters:** Visual assessment plays a critical role in evaluating nonlinear mixed-effect models (NLMEMs).
+
+------------------------------------------------------------------------
+
+## 1.2 Objectives of GOF Assessment
+
+-   Ensure that the model adequately describes observed data.
+-   Assess whether model assumptions (e.g., distribution, variability) are met.
+-   Identify possible areas for improvement by detecting systematic discrepancies.
+
+**Graphical methods** provide insight into: - Structural model correctness - Residual and random variability assessments.
+
+------------------------------------------------------------------------
+
+# Goodness-of-Fit Diagnostic Plots
+
+## 2.1 Observed vs. Predicted Plots {.scrollable .smaller}
+
+### Population Predictions (PRED) vs. Observations (DV)
+
+```{r, echo=FALSE}
+# Load required packages
+library(tidyverse)
+library(tidyvpc)
+library(nlmixr2)
+library(xpose)
+library(ggplot2)
+library(nlmixr2data)
+library(pmplots)
+library(patchwork) 
+
+
+```
+
+```{r}
+#| echo: false
+#| eval: false
+
+# Define the misspecified one-compartment model
+one_compartment_model <- function() {
+  ini({
+    tcl <- log(1)
+    tv <- log(10)
+    eta.cl ~ 0.1
+    eta.v ~ 0.1
+    add.err <- 0.1
+  })
+  model({
+    cl <- exp(tcl + eta.cl)
+    v  <- exp(tv + eta.v)
+    linCmt() ~ add(add.err)
+  })
+}
+
+# Define the true two-compartment model with Michaelis-Menten clearance
+true_model <- function() {
+  ini({
+    lVmax <- log(0.5)
+    lKm <- log(2)
+    lCL <- log(0.1)
+    lV1 <- log(10)
+    lV2 <- log(20)
+    lQ <- log(2)
+    eta.Vmax ~ 0.2
+    eta.Km ~ 0.2
+    eta.CL ~ 0.2
+    eta.V1 ~ 0.2
+    prop.err <- 0.1
+  })
+  model({
+    Vmax <- exp(lVmax + eta.Vmax)
+    Km <- exp(lKm + eta.Km)
+    CL <- exp(lCL + eta.CL)
+    V1 <- exp(lV1 + eta.V1)
+    V2 <- exp(lV2)
+    Q <- exp(lQ)
+    mm_clearance <- (Vmax * (central / V1)) / (Km + (central / V1))
+    linear_clearance <- CL * (central / V1)
+    total_clearance <- mm_clearance + linear_clearance
+    d/dt(central) = -total_clearance - Q * (central / V1 - peripheral / V2)
+    d/dt(peripheral) = Q * (central / V1 - peripheral / V2)
+    cp = central / V1
+    cp ~ prop(prop.err)
+  })
+}
+
+# Simulate data
+data <- nlmixr2data::Bolus_2CPTMM
+
+data <- data %>% lastdose::lastdose()
+
+# Fit the misspecified model
+misspecified_fit <- nlmixr(one_compartment_model, data, est = "focei", control = list(print = 0), 
+                           table = list(cwres = TRUE, npde = TRUE))
+
+# Step 2: Save the model to a file
+saveRDS(misspecified_fit, here::here("model_fits","misspecified_fit.rds"))
+
+# Fit the true model
+true_fit <- nlmixr(true_model, data, est = "focei", control = list(print = 0), 
+                   table = list(cwres = TRUE, npde = TRUE))
+
+# Step 2: Save the model to a file
+saveRDS(true_fit, here::here("model_fits","true_fit.rds"))
+
+
+
+```
+
+```{r}
+#| echo: false
+
+# Simulate data
+data <- nlmixr2data::Bolus_2CPTMM
+
+data <- data %>% lastdose::lastdose()
+
+#load the model fits
+misspecified_fit <- readRDS(here::here("model_fits","misspecified_fit.rds"))
+true_fit <- readRDS(here::here("model_fits","true_fit.rds"))
+
+
+```
+
+-   Interpretation: Ideally, data should scatter uniformly around the line of identity. Systematic deviations could indicate structural model misspecifications​
+    -   The addition of informative covariates *should* reduce the scatter of the data points around the line of identity
+
+```{r}
+#| echo: true
+#| code-fold: true
+#| code-summary: "expand for full code"
+# Generate PRED vs. DV plots
+plot_pred_misspecified <- pmplots::dv_pred(misspecified_fit) + ggtitle("Misspecified Model")
+plot_pred_true <- pmplots::dv_pred(true_fit) + ggtitle("True Model")
+
+# Display plots side by side
+plot_pred_misspecified + plot_pred_true
+
+```
+
+### Individual Predictions (IPRED) vs. Observations (DV)
+
+-   Interpretation: Ideally, data should scatter uniformly around the line of identity. Systematic deviations could indicate structural model misspecifications​
+
+    -   Need to be careful in situations with high shrinkage, as individual predictions may be biased​
+
+```{r}
+#| echo: true
+#| code-fold: true
+#| code-summary: "expand for full code"
+# Generate IPRED vs. DV plots
+plot_ipred_misspecified <- pmplots::dv_ipred(misspecified_fit) + ggtitle("Misspecified Model")
+plot_ipred_true <- pmplots::dv_ipred(true_fit) + ggtitle("True Model")
+
+# Display plots side by side
+plot_ipred_misspecified + plot_ipred_true
+
+```
+
+## 2.2 Residual Plots {.scrollable .smaller}
+
+-   There are several flavors of residuals that are commonly used in popPK modeling
+    -   Notably Conditional Weighted Residuals (CWRES) and Individual Weighted Residuals (IWRES)
+
+**Conditional Weighted Residuals (CWRES)** - CWRES are calculated based on the conditional distribution of observations, taking into account both inter-individual and intra-individual variability. They are computed as:
+
+$\text{CWRES}_i = \frac{y_i - \hat{y}_{i,\text{cond}}}{\text{Var}(y_i \mid \hat{\theta}, \hat{\eta}_i)}$
+
+Where:
+
+-   ( $y_i$ ) is the observed data point for individual ( i ),
+-   ( $\hat{y}_{i,\text{cond}}$ ) is the conditional prediction given the individual’s parameters ( $\hat{\theta}$ ) and ( $\hat{\eta}_i$ ) (i.e., the individual-specific prediction),
+-   ( $\text{Var}(y_i \mid \hat{\theta} \hat{\eta}_i)$ ) is the conditional variance of ( $y_i$ ), accounting for both the inter-individual variability (from random effects, ( $\eta$ )) and intra-individual variability (residual error, ( $\epsilon$ )).
+
+Thus, CWRES adjusts for the uncertainty in the model predictions and are normalized by the conditional variance.
+
+**Individual Weighted Residuals (IWRES)**
+
+IWRES are simpler and involve the difference between the observed data and the individual predictions, scaled by the model's prediction error for the individual. Mathematically, they are expressed as:
+
+$\ \text{IWRES}_i = \frac{y_i - \hat{y}_{i,\text{ind}}}{\sigma}$
+
+Where:
+
+-   ( $y_i$ ) is the observed data point for individual ( i ),
+-   ( $\hat{y}_{i,\text{ind}}$ ) is the individual prediction (IPRED), which depends only on the individual parameters ( $\hat{\theta}$ ) and ( $\hat{\eta}_i$ ),
+-   ( $\sigma$ ) is the residual unexplained variability (standard deviation of the residual error).
+
+IWRES do not account for the uncertainty in the model's population parameters, unlike CWRES. They simply measure the discrepancy between the data and the individual prediction, scaled by the residual error.
+
+**Summary of Differences**
+
+-   **CWRES** accounts for the full variability of the data, including inter-individual and intra-individual variability, making it more reflective of the model's conditional predictions.
+-   **IWRES** is based solely on individual predictions and residual error, making it a simpler, more localized residual that doesn't account for population-level uncertainty.
+-   CWRES generally provides a more comprehensive diagnostic when assessing how well the model fits the data, considering both individual and population variability, while IWRES focuses on individual-level fit.
+
+------------------------------------------------------------------------
+
+### CWRES vs. Time
+
+```{r}
+#| echo: true
+#| code-fold: true
+#| code-summary: "expand for full code"
+
+# Generate CWRES vs. Time plots
+plot_cwres_time_misspecified <- pmplots::cwres_time(misspecified_fit) + ggtitle("Misspecified Model")
+plot_cwres_time_true <- pmplots::cwres_time(true_fit) + ggtitle("True Model")
+
+# Display plots side by side
+plot_cwres_time_misspecified + plot_cwres_time_true
+```
+
+------------------------------------------------------------------------
+
+### CWRES vs. Predictions
+
+```{r}
+#| echo: true
+#| code-fold: true
+#| code-summary: "expand for full code"
+
+# Generate CWRES vs. Predictions plots
+plot_cwres_pred_misspecified <- pmplots::cwres_pred(misspecified_fit) + ggtitle("Misspecified Model")
+plot_cwres_pred_true <- pmplots::cwres_pred(true_fit) + ggtitle("True Model")
+
+# Display plots side by side
+plot_cwres_pred_misspecified + plot_cwres_pred_true
+
+```
+
+------------------------------------------------------------------------
+
+## 2.3 Quantile-Quantile (Q-Q) Plots {.smaller}
+
+-   Assessing normality of residuals helps in verifying distributional assumptions. Deviations suggest model misspecification​
+
+```{r}
+#| echo: true
+#| code-fold: true
+#| code-summary: "expand for full code"
+
+# Q-Q Plot of CWRES misspecified model vs true model
+plot_qq_misspecified <- pmplots::cwres_q(misspecified_fit) + ggtitle("Misspecified Model")
+plot_qq_true <- pmplots::cwres_q(true_fit) + ggtitle("True Model")
+
+# Display plots side by side
+plot_qq_misspecified + plot_qq_true
+
+
+```
+
+## 2.4 Other Diagnostic Plots: Eta Distribution {.smaller}
+
+-   Eta Shrinkage and Empirical Bayes Estimates (EBE) Correlations High Shrinkage (\> 30%) may distort individual parameter estimates and random effect assumptions.
+
+```{r}
+#| echo: true
+#| code-fold: true
+#| code-summary: "expand for full code"
+
+# Plot Eta Histograms and EBE correlations
+p <- true_fit %>% 
+  select(ID,eta.Km, eta.CL, eta.V1) %>%
+  distinct() %>% 
+  pmplots::eta_hist(, x = c("eta.Km","eta.CL", "eta.V1"))
+
+p[[1]] + geom_vline(aes(xintercept = 0),color = "red", linetype = 'dashed') + 
+p[[2]] + geom_vline(aes(xintercept = 0), color = "red", linetype = 'dashed') + 
+p[[3]] + geom_vline(aes(xintercept = 0), color = "red", linetype = 'dashed')
+
+```
+
+------------------------------------------------------------------------
+
+## 2.5 Other Diagnostic Plots: Shrinkage {.scrollable .smaller}
+
+-   Eta Shrinkage and Empirical Bayes Estimates (EBE)
+    -   High Shrinkage (\> 30%) may distort individual parameter estimates and random effect assumptions.
+    -   "In an extreme case of no data available on a particular individual, the individual’s EBE will be equal to the population value. So, the variance of EBE distribution is shrinking towards zero as the quantity of information at the individual level diminishes, a phenomenon defined as η-shrinkage." (Savic et al. 2009)
+
+Looking at the shrinkage:
+
+```{r}
+#| echo: true
+#| code-fold: true
+#| code-summary: "expand for full code"
+
+# show shrinkage
+DT::datatable(true_fit$shrink %>% mutate_all(round,2), options = list(pageLength = 9))
+
+```
+
+## 2.6 Other Diagnostic Plots: Eta Correlations {.smaller}
+
+-   Exploring the correlation between Etas is important for understanding the relationships between random effects.
+    -   Helps inform the need for additional covariates or model refinements (omega block).
+
+```{r fig.align="center"}
+#| echo: true
+#| code-fold: true
+#| code-summary: "expand for full code"
+
+# Plot Eta correlations
+true_fit %>% 
+  select(ID,eta.Km, eta.CL, eta.V1) %>%
+  distinct() %>% 
+  pmplots::eta_pairs( etas = c("eta.Km","eta.CL", "eta.V1"))
+
+
+```
+
+## 2.7 Other Diagnostic Plots: Individual Plots {.smaller}
+
+-   Individual plots can help identify outliers or trends in individual data points that may not be apparent in population-level plots.
+
+```{r, fig.width=12, fig.align="center"}
+#| echo: true
+#| code-fold: true
+
+# Generate individual plots
+
+plot_ind_misspecified <- data %>%
+  filter(MDV == 0) %>%
+  ggplot(aes(TIME, DV)) + 
+  geom_point(size = 2.5, alpha = 0.5 ) +
+  #geom_line(aes(group = ID)) + 
+  geom_line(data = misspecified_fit ,aes(x= TIME, y= IPRED, group=ID), color = "#167fc9", alpha= 0.6) +
+  geom_line(data = misspecified_fit,aes(x= TIME, y= PRED, group=ID), color = "#167fc9", linetype = "dashed", alpha= 0.6) +
+  geom_vline(data = data %>% filter(EVID ==1 ), aes(xintercept = TIME), linetype = "dashed", color = "grey") +
+  #ggrepel::geom_label_repel(data=misspecified_fit %>% 
+  #                            filter(abs(CWRES)>=3) %>% 
+  #                            mutate(ID = as.numeric(as.character(ID))),
+  #                aes(label = round(abs(CWRES),2)),
+  #               box.padding   = 0.35,
+  #               point.padding = 0.8,
+  #               segment.color = 'grey50') +
+  labs(title="Misspecified Model") + 
+  ggforce::facet_wrap_paginate(~ID, scales = "free", ncol = 3, nrow = 3)
+
+  npages = ggforce::n_pages(plot_ind_misspecified)
+  
+
+plot_ind_true <- data %>%
+  filter(MDV == 0) %>%
+  ggplot(aes(TIME, DV)) + 
+  geom_point(size = 2.5, alpha = 0.7 ) +
+  #geom_line(aes(group = ID)) + 
+  geom_line(data = true_fit ,aes(x= TIME, y= IPRED, group=ID), color = "#167fc9", alpha= 0.6) +
+  geom_line(data = true_fit,aes(x= TIME, y= PRED, group=ID), color = "#167fc9", linetype = "dashed", alpha= 0.6) +
+  geom_vline(data = data %>% filter(EVID ==1 ), aes(xintercept = TIME), linetype = "dashed", color = "grey") +
+  #ggrepel::geom_label_repel(data=true_fit %>% 
+  #                            filter(abs(CWRES)>=3) %>% 
+  #                            mutate(ID = as.numeric(as.character(ID))),
+  #                aes(label = round(abs(CWRES),2)),
+  #               box.padding   = 0.35,
+  #               point.padding = 0.8,
+  #               segment.color = 'grey50') +
+  labs(title="True Model") + 
+  ggforce::facet_wrap_paginate(~ID, scales = "free", ncol = 3, nrow = 3)
+
+  npages = ggforce::n_pages(plot_ind_true)  
+  
+
+
+ggpubr::ggarrange(plot_ind_misspecified + facet_wrap_paginate(~ID,scales = "free", ncol = 3, nrow = 3, page = 1), 
+                  plot_ind_true + facet_wrap_paginate(~ID,scales = "free", ncol = 3, nrow = 3, page = 1), 
+                  ncol = 2, nrow = 1)
+
+
+```
+
+# Introduction to Visual Predictive Checks (VPCs)
+
+## 3.1 Definition and Purpose
+
+VPCs offer a powerful way to compare observed data percentiles to simulated data percentiles​
+
+-   Advantages: VPCs account for variability and help visualize prediction intervals​
+
+    -   Discrepancies between observed percentiles and predicted intervals highlight potential misspecifications in structural or residual models
+
+    -   Prediction-corrected VPCs (pcVPCs) are another common version of VPCs that adjust for study design variability (e.g., different dosing regimens or covariates)​
+
+------------------------------------------------------------------------
+
+## 3.2 Mathematical Foundations of pcVPCs {.scrollable .smaller}
+
+In **Prediction-Corrected Visual Predictive Checks (pcVPCs)**, the observed and simulated concentrations are adjusted to account for variability due to study design (e.g., different dosing regimens or covariates). This correction is based on the ratio of the **median model-predicted concentration** for a typical individual in a specific time bin to the **individual-specific predicted concentration** for each observation.
+
+The **prediction-corrected concentration** $C_{\text{pc},i,j}$ for individual $i$ at time point $j$ is calculated as:
+
+$$
+C_{\text{pc},i,j} = C_{i,j} \times \frac{PRED_{\text{median}, j_{\text{bin}}}}{PRED_{i,j}}
+$$
+
+Where:
+
+-   $C_{i,j}$ = Observed or simulated concentration for individual $i$ at time point $j$.
+-   $PRED_{\text{median}, j_{\text{bin}}}$ = **Median model-predicted concentration** for a typical individual in time bin $j_{\text{bin}}$, using typical parameter values (e.g., population-level parameters).
+-   $PRED_{i,j}$ = **Individual-specific model-predicted concentration** for individual $i$ at time point $j$, taking into account individual covariates and random effects.
+
+**Purpose of the Correction:**
+
+By using the median predicted concentration for each time bin $j_{\text{bin}}$, this approach normalizes observed and simulated data relative to a typical individual. This ensures that variability in dosing, covariates, or sampling schedules across individuals is appropriately corrected, making it easier to detect model misspecifications without the confounding effects of study design variability.
+
+## 3.3 Conducting VPCs {.scrollable .smaller}
+
+Interpretation: Does the observed data distribution fall within the predicted intervals and confidence bands. Look for systematic trends that could indicate residual error misspecification​
+
+-   This won't tell us anything about the model's **predictive** performance at the individual level.
+
+```{r}
+#| echo: false
+#| eval: false
+
+# Perform pcVPC
+misspecified_vpc <- nlmixr2::vpcSim(misspecified_fit,n = 500, pred=T)
+true_vpc <- nlmixr2::vpcSim(true_fit,n = 500, pred=T, keep = "DOSE")
+
+# save the sims 
+saveRDS(misspecified_vpc, here::here("model_fits","misspecified_vpc.rds"))
+saveRDS(true_vpc, here::here("model_fits","true_vpc.rds"))
+
+
+misspecified_vpc_time <- misspecified_fit %>% 
+  mutate(ID = as.numeric(as.character(ID))) %>% 
+  left_join(
+    misspecified_vpc %>% 
+      mutate(ID = as.numeric(as.character(id))) %>% 
+      select(ID, TIME=time, pred) %>% distinct()
+    ) %>%  
+  tidyvpc::observed(x = TIME, y = DV) %>%
+  tidyvpc::simulated(misspecified_vpc, y = ipred) %>%
+  tidyvpc::binning(bin = "jenks", n_bins = 10) %>%  # You can adjust the number of bins
+  tidyvpc::predcorrect(pred=pred) %>% 
+  tidyvpc::vpcstats()
+
+
+misspecified_vpc_tad <- misspecified_fit %>%
+  mutate(ID = as.numeric(as.character(ID))) %>% 
+  left_join(
+    misspecified_vpc %>% 
+      mutate(ID = as.numeric(as.character(id))) %>% 
+      select(ID, TIME=time, pred) %>% distinct()
+    ) %>%  
+  tidyvpc::observed(x = tad, y = DV) %>%
+  tidyvpc::simulated(misspecified_vpc, y = ipred) %>%
+  tidyvpc::binning(bin = "jenks", n_bins = 10) %>%  # You can adjust the number of bins
+  tidyvpc::predcorrect(pred=pred) %>% 
+  tidyvpc::vpcstats()
+
+true_vpc_time <- true_fit %>% 
+  mutate(ID = as.numeric(as.character(ID))) %>% 
+  left_join(
+    true_vpc %>% 
+      mutate(ID = as.numeric(as.character(id))) %>% 
+      select(ID, TIME=time, pred) %>% distinct()
+    ) %>%  
+  tidyvpc::observed(x = TIME, y = DV) %>%
+  tidyvpc::simulated(true_vpc, y = ipred) %>%
+  tidyvpc::binning(bin = "jenks", n_bins = 10) %>%  # You can adjust the number of bins
+  tidyvpc::predcorrect(pred=pred) %>% 
+  tidyvpc::vpcstats()
+
+true_vpc_tad <- true_fit %>% 
+  mutate(ID = as.numeric(as.character(ID))) %>% 
+  left_join(
+    true_vpc %>% 
+      mutate(ID = as.numeric(as.character(id))) %>% 
+      select(ID, TIME=time, pred) %>% distinct()
+    ) %>%  
+  tidyvpc::observed(x = tad, y = DV) %>%
+  tidyvpc::simulated(true_vpc, y = ipred) %>%
+  tidyvpc::binning(bin = "jenks", n_bins = 10) %>%  # You can adjust the number of bins
+  tidyvpc::predcorrect(pred=pred) %>% 
+  tidyvpc::vpcstats()
+
+
+true_vpc_strata <- data %>% 
+  filter(MDV == 0 ) %>% 
+  mutate(ID = as.numeric(as.character(ID))) %>% 
+  left_join(
+    true_vpc %>% 
+      mutate(ID = as.numeric(as.character(id))) %>% 
+      select(ID, TIME=time, pred) %>% distinct()
+    ) %>%  
+  tidyvpc::observed(x = TIME, y = DV) %>%
+  tidyvpc::simulated(true_vpc, y = sim) %>%
+  tidyvpc::stratify(~DOSE) %>% 
+  tidyvpc::binning(bin = "jenks", n_bins = 10) %>%  # You can adjust the number of bins
+  tidyvpc::predcorrect(pred=pred) %>% 
+  tidyvpc::vpcstats()
+
+
+
+# save the vpcs 
+saveRDS(misspecified_vpc_time, here::here("model_fits","misspecified_vpc_time.rds"))
+saveRDS(misspecified_vpc_tad, here::here("model_fits","misspecified_vpc_tad.rds"))
+saveRDS(true_vpc_time, here::here("model_fits","true_vpc_time.rds"))
+saveRDS(true_vpc_tad, here::here("model_fits","true_vpc_tad.rds"))
+saveRDS(true_vpc_strata, here::here("model_fits","true_vpc_strata.rds"))
+
+
+```
+
+```{r}
+#| echo: false
+#| eval: true
+
+#load the vpcs
+misspecified_vpc_time <- readRDS(here::here("model_fits","misspecified_vpc_time.rds"))
+misspecified_vpc_tad <- readRDS(here::here("model_fits","misspecified_vpc_tad.rds"))
+true_vpc_time <- readRDS(here::here("model_fits","true_vpc_time.rds"))
+true_vpc_tad <- readRDS(here::here("model_fits","true_vpc_tad.rds"))
+true_vpc_strata <- readRDS(here::here("model_fits","true_vpc_strata.rds"))
+
+
+
+```
+
+```{r}
+#| echo: true
+#| eval: false
+#| code-fold: true
+#| code-summary: "expand for full code"
+
+# Perform pcVPC
+misspecified_vpc <- nlmixr2::vpcSim(misspecified_fit,n = 500, pred=T)
+true_vpc <- nlmixr2::vpcSim(true_fit,n = 500, pred=T, keep = "DOSE")
+
+
+misspecified_vpc_time <- misspecified_fit %>% 
+  mutate(ID = as.numeric(as.character(ID))) %>% 
+  left_join(
+    misspecified_vpc %>% 
+      mutate(ID = as.numeric(as.character(id))) %>% 
+      select(ID, TIME=time, pred) %>% distinct()
+    ) %>%  
+  tidyvpc::observed(x = TIME, y = DV) %>%
+  tidyvpc::simulated(misspecified_vpc, y = ipred) %>%
+  tidyvpc::binning(bin = "jenks", n_bins = 10) %>%  # You can adjust the number of bins
+  tidyvpc::predcorrect(pred=pred) %>% 
+  tidyvpc::vpcstats()
+
+
+misspecified_vpc_tad <- misspecified_fit %>%
+  mutate(ID = as.numeric(as.character(ID))) %>% 
+  left_join(
+    misspecified_vpc %>% 
+      mutate(ID = as.numeric(as.character(id))) %>% 
+      select(ID, TIME=time, pred) %>% distinct()
+    ) %>%  
+  tidyvpc::observed(x = tad, y = DV) %>%
+  tidyvpc::simulated(misspecified_vpc, y = ipred) %>%
+  tidyvpc::binning(bin = "jenks", n_bins = 10) %>%  # You can adjust the number of bins
+  tidyvpc::predcorrect(pred=pred) %>% 
+  tidyvpc::vpcstats()
+
+true_vpc_time <- true_fit %>% 
+  mutate(ID = as.numeric(as.character(ID))) %>% 
+  left_join(
+    true_vpc %>% 
+      mutate(ID = as.numeric(as.character(id))) %>% 
+      select(ID, TIME=time, pred) %>% distinct()
+    ) %>%  
+  tidyvpc::observed(x = TIME, y = DV) %>%
+  tidyvpc::simulated(true_vpc, y = ipred) %>%
+  tidyvpc::binning(bin = "jenks", n_bins = 10) %>%  # You can adjust the number of bins
+  tidyvpc::predcorrect(pred=pred) %>% 
+  tidyvpc::vpcstats()
+
+true_vpc_tad <- true_fit %>% 
+  mutate(ID = as.numeric(as.character(ID))) %>% 
+  left_join(
+    true_vpc %>% 
+      mutate(ID = as.numeric(as.character(id))) %>% 
+      select(ID, TIME=time, pred) %>% distinct()
+    ) %>%  
+  tidyvpc::observed(x = tad, y = DV) %>%
+  tidyvpc::simulated(true_vpc, y = ipred) %>%
+  tidyvpc::binning(bin = "jenks", n_bins = 10) %>%  # You can adjust the number of bins
+  tidyvpc::predcorrect(pred=pred) %>% 
+  tidyvpc::vpcstats()
+
+
+a <- plot(misspecified_vpc_time) + ggtitle("Misspecified Model") + xlab("Time (hrs)")
+b <- plot(misspecified_vpc_tad) + xlab("Time After Dose (hrs)") 
+c <- plot(true_vpc_time) + ggtitle("True Model") +xlab("Time (hrs)")
+d <- plot(true_vpc_tad) + xlab("Time After Dose (hrs)") 
+
+
+ggpubr::ggarrange(a, c, b, d, ncol = 2, nrow = 2)
+```
+
+```{r, fig.width=12, fig.height=8, fig.align='center'}
+#| echo: false
+#| eval: true
+
+a <- plot(misspecified_vpc_time) + ggtitle("Misspecified Model") + xlab("Time (hrs)")
+b <- plot(misspecified_vpc_tad) + xlab("Time After Dose (hrs)")
+c <- plot(true_vpc_time) + ggtitle("True Model") + xlab("Time (hrs)")
+d <- plot(true_vpc_tad) + xlab("Time After Dose (hrs)")
+
+ggpubr::ggarrange(a, c, b, d, ncol = 2, nrow = 2)
+
+```
+
+## 3.4 Stratified VPCs {.scrollable .smaller}
+
+Important to consider relevant stratification to fully evaluate model performance​
+
+```{r}
+#| echo: true
+#| eval: false
+#| code-fold: true
+#| code-summary: "expand for full code"
+#| 
+true_vpc_strata <- data %>% 
+  filter(MDV == 0 ) %>% 
+  mutate(ID = as.numeric(as.character(ID))) %>% 
+  left_join(
+    true_vpc %>% 
+      mutate(ID = as.numeric(as.character(id))) %>% 
+      select(ID, TIME=time, pred) %>% distinct()
+    ) %>%  
+  tidyvpc::observed(x = TIME, y = DV) %>%
+  tidyvpc::simulated(true_vpc, y = sim) %>%
+  tidyvpc::stratify(~DOSE) %>% 
+  tidyvpc::binning(bin = "jenks", n_bins = 10) %>%  # You can adjust the number of bins
+  tidyvpc::predcorrect(pred=pred) %>% 
+  tidyvpc::vpcstats()
+
+plot(true_vpc_strata) + ggtitle("True Model ~ Stratified by dose") + xlab("Time (hrs)")
+
+```
+
+```{r}
+#| echo: false
+#| eval: true
+
+true_vpc_strata <- readRDS(here::here("model_fits","true_vpc_strata.rds"))
+
+plot(true_vpc_strata) + ggtitle("True Model ~ Stratified by dose") + xlab("Time (hrs)")
+
+```
+
+## 3.5 Other VPC Flavors: PSN {.smaller}
+
+Pearl-Speaks-Nonmem (PSN) is another popular tool for VPCs, offering a range of features and customization options​
+
+``` bash
+# Example PSN command
+vpc run1.mod -samples=500 -auto_bin=10 -rplots=1 -output_dir=vpc_dir1
+```
+
+```{r}
+#| echo: true
+#| eval: false
+#| code-fold: true
+#| code-summary: "expand for full code"
+
+# Example code visualizing VPCs generated using PSN
+library(xpose)
+
+# Load PSN VPC data
+xpdb <- xpose_data(dir = here::here("nonmem"),prefix = "Run", 1) 
+
+
+xpdb %>% 
+ vpc_data(psn_folder = here::here("nonmem", "vpc_dir1")) %>%  # Compute the vpc data
+ vpc()            # Plot the vpc
+
+```
+
+![PSN VPC Example](images/vpc_xpose.png)
+
+## 3.6 Other VPC Flavors: MRGsolve + TidyVPC {.smaller}
+
+There are also options to perform your nonmem simulations outside of nonmem using tools like mrgsolve.
+
+```{r}
+#| echo: true
+#| eval: false
+#| code-fold: true
+#| code-summary: "expand for full code"
+
+# Example code for running VPCs using mrgsolve and tidyvpc
+# Sim for VPC
+n.vpc <- 1000
+
+df.sim.vpc <-
+  df.nm %>% 
+  # Add parameter values
+  expand_grid(df.theta) %>% 
+  # Duplicate all records n.vpc times
+  # Need to give different ID#
+  expand_grid(REP = 1:n.vpc) %>% 
+  mutate(ID = NMID * n.vpc + REP) %>% 
+  arrange(REP, NMID, TIME, EVID)
+
+mrgsim.vpc <- 
+  mod_pk %>% 
+  carry_out(REP, NMID, AMT, EVID, WT, SEX) %>% 
+  data_set(df.sim.vpc) %>%
+  omat(d.omat) %>% 
+  mrgsim(tad = TRUE, recover = "PHASE")
+
+df.mrgsim.vpc <- 
+  as_tibble(mrgsim.vpc) %>% 
+  filter(EVID == 0)
+
+
+# Sim PRED (required for tidyvpc)
+df.sim.pred.for.vpc <-
+  df.nm %>% 
+  # Add parameter values
+  expand_grid(df.theta) %>% 
+  mutate(ID = NMID) 
+
+mrgsim.pred.for.vpc <- 
+  mod_pk %>% 
+  carry_out(NMID, AMT, EVID) %>% 
+  data_set(df.sim.pred.for.vpc) %>%
+  zero_re() %>% 
+  mrgsim(tad = TRUE, recover = "PHASE")
+
+df.tad.pred <- 
+  mrgsim.pred.for.vpc %>% 
+  filter(EVID == 0) %>% 
+  # Here IPRED is PRED as zero_re was used
+  select(tad, PRED = IPRED)
+
+
+vpc <- 
+  df.nm.obs %>% 
+  bind_cols(df.tad.pred) %>% 
+  mutate(PHASE = factor(PHASE, levels = c("SD", "MD"))) %>% 
+  observed(x=TIME, y=DV) %>%
+  simulated(df.mrgsim.vpc, y=DV) %>%
+  stratify(~PHASE) %>% 
+  # binning(bin = NTIM) %>% 
+  binning(bin = "breaks", breaks = c(0, 1, 4, 5, 12, 24, 171, 185, 200)) %>% 
+  vpcstats()
+
+plot(vpc) +
+  xgx_scale_x_time_units(units_dataset = time_units_dataset, 
+                         units_plot    = time_units_plot,
+                         breaks = (0:40) * 6)
+
+
+```
+
+![MRGsolve + TidyVPC Example](images/vpc.png)
+
+# Common Pitfalls and Best Practices
+
+## 4.1 Over-Interpretation of Diagnostics
+
+-   **Critical** Remember to evaluate your model with respect to your clinical context and use case.
+
+-   Avoid over-interpreting random variability as model issues, especially in sparse data settings​
+
+-   Need to interpret GOF plots with caution in high shrinkage situations (situation where VPCs maybe more useful)​
+
+# Conclusion and Summary
+
+## 6.1 Recap of Key Points {.smaller}
+
+GOF and VPC are critical tools in model evaluation, helping to identify structural and residual errors they should be performed throughout the model development process at critical steps.
+
+![](images/poppk_workflow.png)
+
+## 6.2 Final Thoughts
+
+Iterative Process: Model building is an iterative process. Be prepared to refine the model based on diagnostic outputs​
+
+# References {.smaller}
+
+-   [Nguyen et al.: Model Evaluation of Continuous Data Pharmacometric Models: Metrics and Graphics, CPT Pharmacometrics Syst. Pharmacol. 2017.](https://pubmed.ncbi.nlm.nih.gov/27884052/)
+
+-   [Bergstrand, Martin et al. “Prediction-corrected visual predictive checks for diagnosing nonlinear mixed-effects models.” The AAPS journal vol. 13,2 (2011): 143-51. doi:10.1208/s12248-011-9255-z](https://pmc.ncbi.nlm.nih.gov/articles/PMC3085712/)
+
+-   [FDA Guidelines: Population Pharmacokinetics Guidance.](https://www.fda.gov/media/71364/download)
+
+-   [Metrum VPC Examples](https://merge.metrumrg.com/expo/expo1-nonmem-foce/posts/pk-vpc-final.html)
+
+-   [Tidy VPC](https://certara.github.io/tidyvpc/index.html)
+
+-   [PMPlots](https://metrumresearchgroup.github.io/pmplots/)
+
+-   [Xpose](https://cran.r-project.org/web/packages/xpose/index.html)
+
+------------------------------------------------------------------------
