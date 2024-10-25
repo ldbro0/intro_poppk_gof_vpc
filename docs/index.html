@@ -504,15 +504,16 @@ Logan Brooks
 <li>There are several flavors of residuals that are commonly used in popPK modeling
 <ul>
 <li>Notably Conditional Weighted Residuals (CWRES) and Individual Weighted Residuals (IWRES)</li>
+<li>Expect our residuals to be follow <span class="math inline">\(N \backsim (0,1)\)</span>, observations where <span class="math inline">\(|\text{WRES}| \ge 6\)</span> maybe considered outliers and <span class="math inline">\(|\text{WRES}| \ge 3\)</span> may be considered influential.</li>
 </ul></li>
 </ul>
 <p><strong>Conditional Weighted Residuals (CWRES)</strong> - CWRES are calculated based on the conditional distribution of observations, taking into account both inter-individual and intra-individual variability. They are computed as:</p>
-<p><span class="math inline">\(\text{CWRES}_i = \frac{y_i - \hat{y}_{i,\text{cond}}}{\text{Var}(y_i \mid \hat{\theta}, \hat{\eta}_i)}\)</span></p>
+<p><span class="math inline">\(\text{CWRES}_i = \frac{y_i - E(\hat{y}_{i})}{\sqrt{\text{COV}(\hat{y_{i}}) }}\)</span></p>
 <p>Where:</p>
 <ul>
-<li>( <span class="math inline">\(y_i\)</span> ) is the observed data point for individual ( i ),</li>
-<li>( <span class="math inline">\(\hat{y}_{i,\text{cond}}\)</span> ) is the conditional prediction given the individual’s parameters ( <span class="math inline">\(\hat{\theta}\)</span> ) and ( <span class="math inline">\(\hat{\eta}_i\)</span> ) (i.e., the individual-specific prediction),</li>
-<li>( <span class="math inline">\(\text{Var}(y_i \mid \hat{\theta} \hat{\eta}_i)\)</span> ) is the conditional variance of ( <span class="math inline">\(y_i\)</span> ), accounting for both the inter-individual variability (from random effects, ( <span class="math inline">\(\eta\)</span> )) and intra-individual variability (residual error, ( <span class="math inline">\(\epsilon\)</span> )).</li>
+<li><span class="math inline">\(y_i\)</span> is the observed data for individual <span class="math inline">\(i\)</span></li>
+<li><span class="math inline">\(E(\hat{y}_{i})\)</span> is the expected / conditional prediction given the individual’s parameters (i.e., individual-specific prediction using the post hoc estimates)</li>
+<li><span class="math inline">\(\text{COV}(\hat{y_{i}})\)</span> is the conditional variance of the prediction, accounting for inter- and intra-individual variability.</li>
 </ul>
 <p>Thus, CWRES adjusts for the uncertainty in the model predictions and are normalized by the conditional variance.</p>
 <p><strong>Individual Weighted Residuals (IWRES)</strong></p>
@@ -524,12 +525,13 @@ Logan Brooks
 <li>( <span class="math inline">\(\hat{y}_{i,\text{ind}}\)</span> ) is the individual prediction (IPRED), which depends only on the individual parameters ( <span class="math inline">\(\hat{\theta}\)</span> ) and ( <span class="math inline">\(\hat{\eta}_i\)</span> ),</li>
 <li>( <span class="math inline">\(\sigma\)</span> ) is the residual unexplained variability (standard deviation of the residual error).</li>
 </ul>
-<p>IWRES do not account for the uncertainty in the model’s population parameters, unlike CWRES. They simply measure the discrepancy between the data and the individual prediction, scaled by the residual error.</p>
 <p><strong>Summary of Differences</strong></p>
 <ul>
-<li><strong>CWRES</strong> accounts for the full variability of the data, including inter-individual and intra-individual variability, making it more reflective of the model’s conditional predictions.</li>
+<li><strong>CWRES</strong> accounts for the full variability of the data, including inter-individual and intra-individual variability, making it more reflective of the model’s conditional predictions.
+<ul>
+<li>CWRES generally provides a more comprehensive diagnostic when assessing how well the model fits the data, considering both individual and population variability</li>
+</ul></li>
 <li><strong>IWRES</strong> is based solely on individual predictions and residual error, making it a simpler, more localized residual that doesn’t account for population-level uncertainty.</li>
-<li>CWRES generally provides a more comprehensive diagnostic when assessing how well the model fits the data, considering both individual and population variability, while IWRES focuses on individual-level fit.</li>
 </ul>
 </section>
 <section class="slide level2">
@@ -620,8 +622,8 @@ Logan Brooks
 <span id="cb7-2"><a></a>DT<span class="sc">::</span><span class="fu">datatable</span>(true_fit<span class="sc">$</span>shrink <span class="sc">%&gt;%</span> <span class="fu">mutate_all</span>(round,<span class="dv">2</span>), <span class="at">options =</span> <span class="fu">list</span>(<span class="at">pageLength =</span> <span class="dv">9</span>))</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </details>
 <div class="cell-output-display">
-<div class="datatables html-widget html-fill-item" id="htmlwidget-089d8700d6240698164c" style="width:100%;height:auto;"></div>
-<script type="application/json" data-for="htmlwidget-089d8700d6240698164c">{"x":{"filter":"none","vertical":false,"data":[["mean","var","sd","skewness","kurtosis","var shrinkage (%)","sd shrinkage (%)","t statistic","p-value"],[0.01,0.11,0.33,-0.27,0.86,33.29,18.33,0.26,0.8],[0.02,0.05,0.23,-0.32,1.2,58.04,35.23,0.8,0.43],[-0.01,0.35,0.59,0.6899999999999999,3.11,65.09,40.92,-0.14,0.89],[-0,0.08,0.29,-0.04,-0.4,-0.42,-0.21,-0.09,0.93],[0.01,0.97,0.99,0.5,0.41,2.56,1.29,0.74,1.54]],"container":"<table class=\"display\">\n  <thead>\n    <tr>\n      <th> <\/th>\n      <th>eta.Vmax<\/th>\n      <th>eta.Km<\/th>\n      <th>eta.CL<\/th>\n      <th>eta.V1<\/th>\n      <th>IWRES<\/th>\n    <\/tr>\n  <\/thead>\n<\/table>","options":{"pageLength":9,"columnDefs":[{"className":"dt-right","targets":[1,2,3,4,5]},{"orderable":false,"targets":0},{"name":" ","targets":0},{"name":"eta.Vmax","targets":1},{"name":"eta.Km","targets":2},{"name":"eta.CL","targets":3},{"name":"eta.V1","targets":4},{"name":"IWRES","targets":5}],"order":[],"autoWidth":false,"orderClasses":false,"lengthMenu":[9,10,25,50,100]}},"evals":[],"jsHooks":[]}</script>
+<div class="datatables html-widget html-fill-item" id="htmlwidget-f46aba8efcb588ba5dad" style="width:100%;height:auto;"></div>
+<script type="application/json" data-for="htmlwidget-f46aba8efcb588ba5dad">{"x":{"filter":"none","vertical":false,"data":[["mean","var","sd","skewness","kurtosis","var shrinkage (%)","sd shrinkage (%)","t statistic","p-value"],[0.01,0.11,0.33,-0.27,0.86,33.29,18.33,0.26,0.8],[0.02,0.05,0.23,-0.32,1.2,58.04,35.23,0.8,0.43],[-0.01,0.35,0.59,0.6899999999999999,3.11,65.09,40.92,-0.14,0.89],[-0,0.08,0.29,-0.04,-0.4,-0.42,-0.21,-0.09,0.93],[0.01,0.97,0.99,0.5,0.41,2.56,1.29,0.74,1.54]],"container":"<table class=\"display\">\n  <thead>\n    <tr>\n      <th> <\/th>\n      <th>eta.Vmax<\/th>\n      <th>eta.Km<\/th>\n      <th>eta.CL<\/th>\n      <th>eta.V1<\/th>\n      <th>IWRES<\/th>\n    <\/tr>\n  <\/thead>\n<\/table>","options":{"pageLength":9,"columnDefs":[{"className":"dt-right","targets":[1,2,3,4,5]},{"orderable":false,"targets":0},{"name":" ","targets":0},{"name":"eta.Vmax","targets":1},{"name":"eta.Km","targets":2},{"name":"eta.CL","targets":3},{"name":"eta.V1","targets":4},{"name":"IWRES","targets":5}],"order":[],"autoWidth":false,"orderClasses":false,"lengthMenu":[9,10,25,50,100]}},"evals":[],"jsHooks":[]}</script>
 </div>
 </div>
 </section>
