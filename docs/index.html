@@ -620,8 +620,8 @@ Logan Brooks
 <span id="cb7-2"><a></a>DT<span class="sc">::</span><span class="fu">datatable</span>(true_fit<span class="sc">$</span>shrink <span class="sc">%&gt;%</span> <span class="fu">mutate_all</span>(round,<span class="dv">2</span>), <span class="at">options =</span> <span class="fu">list</span>(<span class="at">pageLength =</span> <span class="dv">9</span>))</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </details>
 <div class="cell-output-display">
-<div class="datatables html-widget html-fill-item" id="htmlwidget-52e0310465ef2c23504f" style="width:100%;height:auto;"></div>
-<script type="application/json" data-for="htmlwidget-52e0310465ef2c23504f">{"x":{"filter":"none","vertical":false,"data":[["mean","var","sd","skewness","kurtosis","var shrinkage (%)","sd shrinkage (%)","t statistic","p-value"],[0.01,0.11,0.33,-0.27,0.86,33.29,18.33,0.26,0.8],[0.02,0.05,0.23,-0.32,1.2,58.04,35.23,0.8,0.43],[-0.01,0.35,0.59,0.6899999999999999,3.11,65.09,40.92,-0.14,0.89],[-0,0.08,0.29,-0.04,-0.4,-0.42,-0.21,-0.09,0.93],[0.01,0.97,0.99,0.5,0.41,2.56,1.29,0.74,1.54]],"container":"<table class=\"display\">\n  <thead>\n    <tr>\n      <th> <\/th>\n      <th>eta.Vmax<\/th>\n      <th>eta.Km<\/th>\n      <th>eta.CL<\/th>\n      <th>eta.V1<\/th>\n      <th>IWRES<\/th>\n    <\/tr>\n  <\/thead>\n<\/table>","options":{"pageLength":9,"columnDefs":[{"className":"dt-right","targets":[1,2,3,4,5]},{"orderable":false,"targets":0},{"name":" ","targets":0},{"name":"eta.Vmax","targets":1},{"name":"eta.Km","targets":2},{"name":"eta.CL","targets":3},{"name":"eta.V1","targets":4},{"name":"IWRES","targets":5}],"order":[],"autoWidth":false,"orderClasses":false,"lengthMenu":[9,10,25,50,100]}},"evals":[],"jsHooks":[]}</script>
+<div class="datatables html-widget html-fill-item" id="htmlwidget-dd919f684d27c7b89438" style="width:100%;height:auto;"></div>
+<script type="application/json" data-for="htmlwidget-dd919f684d27c7b89438">{"x":{"filter":"none","vertical":false,"data":[["mean","var","sd","skewness","kurtosis","var shrinkage (%)","sd shrinkage (%)","t statistic","p-value"],[0.01,0.11,0.33,-0.27,0.86,33.29,18.33,0.26,0.8],[0.02,0.05,0.23,-0.32,1.2,58.04,35.23,0.8,0.43],[-0.01,0.35,0.59,0.6899999999999999,3.11,65.09,40.92,-0.14,0.89],[-0,0.08,0.29,-0.04,-0.4,-0.42,-0.21,-0.09,0.93],[0.01,0.97,0.99,0.5,0.41,2.56,1.29,0.74,1.54]],"container":"<table class=\"display\">\n  <thead>\n    <tr>\n      <th> <\/th>\n      <th>eta.Vmax<\/th>\n      <th>eta.Km<\/th>\n      <th>eta.CL<\/th>\n      <th>eta.V1<\/th>\n      <th>IWRES<\/th>\n    <\/tr>\n  <\/thead>\n<\/table>","options":{"pageLength":9,"columnDefs":[{"className":"dt-right","targets":[1,2,3,4,5]},{"orderable":false,"targets":0},{"name":" ","targets":0},{"name":"eta.Vmax","targets":1},{"name":"eta.Km","targets":2},{"name":"eta.CL","targets":3},{"name":"eta.V1","targets":4},{"name":"IWRES","targets":5}],"order":[],"autoWidth":false,"orderClasses":false,"lengthMenu":[9,10,25,50,100]}},"evals":[],"jsHooks":[]}</script>
 </div>
 </div>
 </section>
@@ -712,7 +712,7 @@ Logan Brooks
 </section>
 <section id="definition-and-purpose" class="slide level2">
 <h2>3.1 Definition and Purpose</h2>
-<p>VPCs offer a powerful way to compare observed data percentiles to simulated data percentiles​</p>
+<p>VPCs offer a powerful way to compare observed data percentiles to simulated data percentiles​ This is accomplished by simulated from the fitted model given the observed data and comparing the percentiles of the observed data to the percentiles of the simulated data.</p>
 <ul>
 <li><p>Advantages: VPCs account for variability and help visualize prediction intervals​</p>
 <ul>
@@ -741,7 +741,8 @@ C_{\text{pc},i,j} = C_{i,j} \times \frac{PRED_{\text{median}, j_{\text{bin}}}}{P
 <h2>3.3 Conducting VPCs</h2>
 <p>Interpretation: Does the observed data distribution fall within the predicted intervals and confidence bands. Look for systematic trends that could indicate residual error misspecification​</p>
 <ul>
-<li>This won’t tell us anything about the model’s <strong>predictive</strong> performance at the individual level.</li>
+<li><p><strong>PLEASE NOTE</strong> This won’t tell us anything about the model’s <strong>predictive</strong> performance at the individual level.</p></li>
+<li><p>Additional consideration may be needed for BLQ data, censoring/dropout and other more complicated endpoints (e.g.&nbsp;categorical models, markov models etc.)</p></li>
 </ul>
 <div class="cell">
 <details class="code-fold">
@@ -845,6 +846,9 @@ C_{\text{pc},i,j} = C_{i,j} \times \frac{PRED_{\text{median}, j_{\text{bin}}}}{P
 <section id="other-vpc-flavors-psn" class="slide level2 smaller">
 <h2>3.5 Other VPC Flavors: PSN</h2>
 <p>Pearl-Speaks-Nonmem (PSN) is another popular tool for VPCs, offering a range of features and customization options​</p>
+<ul>
+<li>Here the simulation is run through PSN + Nonmem and the post-processing is done using <code>xpose</code> in R</li>
+</ul>
 <div class="sourceCode" id="cb12"><pre class="sourceCode numberSource bash number-lines code-with-copy"><code class="sourceCode bash"><span id="cb12-1"><a></a><span class="co"># Example PSN command</span></span>
 <span id="cb12-2"><a></a><span class="ex">vpc</span> run1.mod <span class="at">-samples</span><span class="op">=</span>500 <span class="at">-auto_bin</span><span class="op">=</span>10 <span class="at">-rplots</span><span class="op">=</span>1 <span class="at">-output_dir</span><span class="op">=</span>vpc_dir1</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell">
@@ -866,7 +870,7 @@ C_{\text{pc},i,j} = C_{i,j} \times \frac{PRED_{\text{median}, j_{\text{bin}}}}{P
 <img data-src="images/vpc_xpose.png" class="r-stretch quarto-figure-center"><p class="caption">PSN VPC Example</p></section>
 <section id="other-vpc-flavors-mrgsolve-tidyvpc" class="slide level2 smaller">
 <h2>3.6 Other VPC Flavors: MRGsolve + TidyVPC</h2>
-<p>There are also options to perform your nonmem simulations outside of nonmem using tools like mrgsolve.</p>
+<p>There are also options to perform your nonmem simulations outside of nonmem using tools like <code>mrgsolve</code> and visualized with tools like <code>tidyvpc</code>.</p>
 <div class="cell">
 <details class="code-fold">
 <summary>expand for full code</summary>
@@ -946,7 +950,7 @@ C_{\text{pc},i,j} = C_{i,j} \times \frac{PRED_{\text{median}, j_{\text{bin}}}}{P
 <ul>
 <li><p><strong>Critical</strong> Remember to evaluate your model with respect to your clinical context and use case.</p></li>
 <li><p>Avoid over-interpreting random variability as model issues, especially in sparse data settings​</p></li>
-<li><p>Need to interpret GOF plots with caution in high shrinkage situations (situation where VPCs maybe more useful)​</p></li>
+<li><p>Need to interpret GOF plots with caution in high shrinkage situations (these are situations where VPCs maybe more useful)​</p></li>
 </ul>
 </section></section>
 <section>
@@ -956,7 +960,11 @@ C_{\text{pc},i,j} = C_{i,j} \times \frac{PRED_{\text{median}, j_{\text{bin}}}}{P
 </section>
 <section id="recap-of-key-points" class="slide level2 smaller">
 <h2>6.1 Recap of Key Points</h2>
-<p>GOF and VPC are critical tools in model evaluation, helping to identify structural and residual errors they should be performed throughout the model development process at critical steps.</p>
+<p>GOF and VPC are critical tools in model evaluation, they help to identify structural and residual errors, they should be performed throughout the model development process at critical steps.</p>
+<ul>
+<li><p>Don’t forget the dreaded shrinkage!</p></li>
+<li><p>Don’t forget to consider the clinical context and use case when interpreting diagnostics!</p></li>
+</ul>
 
 <img data-src="images/poppk_workflow.png" class="r-stretch"></section>
 <section id="final-thoughts" class="slide level2">

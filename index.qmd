@@ -387,7 +387,7 @@ ggpubr::ggarrange(plot_ind_misspecified + facet_wrap_paginate(~ID,scales = "free
 
 ## 3.1 Definition and Purpose
 
-VPCs offer a powerful way to compare observed data percentiles to simulated data percentiles​
+VPCs offer a powerful way to compare observed data percentiles to simulated data percentiles​  This is accomplished by simulated from the fitted model given the observed data and comparing the percentiles of the observed data to the percentiles of the simulated data.
 
 -   Advantages: VPCs account for variability and help visualize prediction intervals​
 
@@ -421,7 +421,9 @@ By using the median predicted concentration for each time bin $j_{\text{bin}}$, 
 
 Interpretation: Does the observed data distribution fall within the predicted intervals and confidence bands. Look for systematic trends that could indicate residual error misspecification​
 
--   This won't tell us anything about the model's **predictive** performance at the individual level.
+-   **PLEASE NOTE** This won't tell us anything about the model's **predictive** performance at the individual level.
+
+- Additional consideration may be needed for BLQ data, censoring/dropout and other more complicated endpoints (e.g. categorical models, markov models etc.)
 
 ```{r}
 #| echo: false
@@ -662,6 +664,8 @@ plot(true_vpc_strata) + ggtitle("True Model ~ Stratified by dose") + xlab("Time 
 
 Pearl-Speaks-Nonmem (PSN) is another popular tool for VPCs, offering a range of features and customization options​
 
+-  Here the simulation is run through PSN + Nonmem and the post-processing is done using `xpose` in R 
+
 ``` bash
 # Example PSN command
 vpc run1.mod -samples=500 -auto_bin=10 -rplots=1 -output_dir=vpc_dir1
@@ -690,7 +694,7 @@ xpdb %>%
 
 ## 3.6 Other VPC Flavors: MRGsolve + TidyVPC {.smaller}
 
-There are also options to perform your nonmem simulations outside of nonmem using tools like mrgsolve.
+There are also options to perform your nonmem simulations outside of nonmem using tools like `mrgsolve` and visualized with tools like `tidyvpc`.
 
 ```{r}
 #| echo: true
@@ -774,13 +778,17 @@ plot(vpc) +
 
 -   Avoid over-interpreting random variability as model issues, especially in sparse data settings​
 
--   Need to interpret GOF plots with caution in high shrinkage situations (situation where VPCs maybe more useful)​
+-   Need to interpret GOF plots with caution in high shrinkage situations (these are situations where VPCs maybe more useful)​
 
 # Conclusion and Summary
 
 ## 6.1 Recap of Key Points {.smaller}
 
-GOF and VPC are critical tools in model evaluation, helping to identify structural and residual errors they should be performed throughout the model development process at critical steps.
+GOF and VPC are critical tools in model evaluation, they help to identify structural and residual errors, they should be performed throughout the model development process at critical steps.
+
+- Don't forget the dreaded shrinkage! 
+
+- Don't forget to consider the clinical context and use case when interpreting diagnostics! 
 
 ![](images/poppk_workflow.png)
 
