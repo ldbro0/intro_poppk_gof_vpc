@@ -1,0 +1,27 @@
+# this is the .gitignore for .qmd project please add things that I should ignore for this project including typical R project files / google drive files
+# R specific files
+*.Rproj
+*.Rhistory
+.RData
+.Ruserdata
+
+# R environment files
+.Renviron
+.Renviron.site
+.Rprofile
+.Rprofile.site
+
+# R package files
+.Rbuildignore
+
+# google drive hidden files (.ds_store)
+.DS_Store
+
+
+# quarto stuff (.quarto)
+
+/.quarto/
+/_site/
+_site/
+public/
+.Rproj.user
